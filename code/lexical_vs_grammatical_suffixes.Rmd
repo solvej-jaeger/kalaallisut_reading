@@ -1,0 +1,194 @@
+---
+title: "Lexical vs. grammatical suffixes"
+date: "2025-06-16"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(ggpubr)
+library(data.table)
+library(readr)
+library(lmerTest)
+library(stringr)
+library(forcats)
+library(purrr)
+library(ggrepel)
+```
+
+## Reading data files
+
+```{r reading data}
+# read clean fix report
+fix_report <- fread("../data/fix_report_clean.tsv")
+
+# read clean getreadingmeasures files
+df_affix <- fread("../data/rm_target_affix_clean.tsv")
+df_baseline <- fread("../data/rm_baseline_clean.tsv")
+df_root <- fread("../data/rm_root_clean.tsv")
+df_rest <- fread("../data/rm_rest_clean.tsv")
+
+# read demographics
+df_demographics <- na.omit(readr::read_delim("../data/demographics.csv", delim = ";", locale = readr::locale(encoding = "UTF-8"), show_col_types = FALSE))
+
+# merge df_demographics with df_affix and df_baseline
+df_affix <- merge(df_affix, df_demographics, by.x = "participant_id", by.y = "participant_no")
+df_baseline <- merge(df_baseline, df_demographics, by.x = "participant_id", by.y = "participant_no")
+```
+
+## Analyses of reading measures for target affixes
+
+### Extra data cleaning
+
+I exclude trials from the affix analysis where number of fixations per character on the target word is more than 3 SDs from the participant mean (because this could indicate that the participant didn't understand the target word).
+
+```{r extra data cleaning}
+# first convert CURRENT_FIX_INTEREST_AREA_ID to integer
+fix_report <- fix_report %>%
+  mutate(CURRENT_FIX_INTEREST_AREA_ID = as.integer(ifelse(CURRENT_FIX_INTEREST_AREA_ID == ".", NA, CURRENT_FIX_INTEREST_AREA_ID)))
+
+# add column containing length of target word
+fix_report <- fix_report %>%
+  mutate(target_word_length = nchar(target_word))
+
+# get number of fixations on target word (word containing target affix) for each trial
+fixations_on_target <- fix_report %>%
+  filter(CURRENT_FIX_INTEREST_AREA_ID >= crit_root_start &
+           CURRENT_FIX_INTEREST_AREA_ID <= rest_word_end) %>%
+  group_by(trial_key, participant_id, item_no, target_word_length) %>%
+  summarise(n_fix_target_word = n()) %>%
+  ungroup()
+
+# make column with fix per char for each trial
+fixations_on_target <- fixations_on_target %>%
+  mutate(n_fix_per_char = n_fix_target_word / target_word_length)
+
+# calculate participant means and SDs
+fixations_on_target_means <- fixations_on_target %>%
+  group_by(participant_id) %>%
+  mutate(
+    mean_fix_char = mean(n_fix_per_char, na.rm = TRUE),
+    sd_fix_char = sd(n_fix_per_char, na.rm = TRUE),
+    z_score = (n_fix_per_char - mean_fix_char) / sd_fix_char,
+    is_outlier = abs(z_score) > 3
+  ) %>%
+  ungroup()
+
+# get list of outliers (trials where n_fix_target_word is more than 3 SDs from the mean)
+outlier_trials <- fixations_on_target_means %>%
+  filter(is_outlier == TRUE)
+
+# exclude outliers
+df_affix_cleaned <- df_affix %>%
+  filter(!trial_key %in% outlier_trials$trial_key)
+df_root_cleaned <- df_root %>%
+  filter(!trial_key %in% outlier_trials$trial_key)
+df_rest_cleaned <- df_rest %>%
+  filter(!trial_key %in% outlier_trials$trial_key)
+```
+
+
+### Skipping model
+
+```{r skipping affixes}
+df_skip_model <- df_affix_cleaned %>%
+  mutate(
+    skipped = as.integer(FIRST_PASS_FIXATION_COUNT == 0)    # 1 = skipped, 0 = fixated
+  )
+
+model_skipping <- glmer(
+  skipped ~ affix_type + affix_frequency_log + affix_length + predictability_log +
+    (1 | participant_id), # random intercepts for participants
+  data = df_skip_model,
+  family = "binomial"
+)
+
+summary(model_skipping)
+```
+
+### First fixation duration model
+
+```{r ffd affixes}
+df_affix_cleaned_without_skipped <- df_affix_cleaned %>%
+  filter(FIRST_PASS_FIXATION_COUNT != 0) %>%
+  mutate(FIRST_FIXATION_DURATION_log = log(FIRST_FIXATION_DURATION),
+         GAZE_DURATION_log = log(GAZE_DURATION))
+
+model_ffd <- lmer(
+  FIRST_FIXATION_DURATION_log ~ affix_type + affix_frequency_log + affix_length + predictability_log +
+    (1 | participant_id),
+  data = df_affix_cleaned_without_skipped
+)
+
+summary(model_ffd)
+```
+
+### Gaze duration model
+
+```{r gd affixes}
+model_gd <- lmer(
+  GAZE_DURATION_log ~ affix_type + affix_frequency_log + affix_length + predictability_log +
+    (1 | participant_id), # random intercept
+  data = df_affix_cleaned_without_skipped
+)
+
+summary(model_gd)
+```
+
+## Analyses of reading measures for baseline words
+
+### Skipping model
+
+```{r skipping baseline words}
+df_skip_model_baseline <- df_baseline %>%
+  mutate(
+    skipped = as.integer(FIRST_PASS_FIXATION_COUNT == 0)    # 1 = skipped, 0 = fixated
+  )
+
+model_skipping_baseline <- glmer(
+  skipped ~ baseline_type + crit_word_start_within_sentence +
+    (1 | participant_id),
+  data = df_skip_model_baseline,
+  family = "binomial"
+)
+
+summary(model_skipping_baseline)
+```
+
+
+### First fixation duration model
+
+```{r ffd baseline words}
+df_baseline_cleaned_without_skipped <- df_baseline %>%
+  filter(FIRST_PASS_FIXATION_COUNT != 0) %>%
+  mutate(FIRST_FIXATION_DURATION_log = log(FIRST_FIXATION_DURATION),
+         GAZE_DURATION_log = log(GAZE_DURATION))
+
+model_ffd_baseline <- lmer(
+  FIRST_FIXATION_DURATION_log ~ baseline_type + crit_word_start_within_sentence +
+    (1 | participant_id),
+  data = df_baseline_cleaned_without_skipped
+)
+
+summary(model_ffd_baseline)
+```
+
+
+### Gaze duration model
+
+```{r gd baseline words}
+model_gd_baseline <- lmer(
+  GAZE_DURATION_log ~ baseline_type + crit_word_start_within_sentence +
+    (1 | participant_id),
+  data = df_baseline_cleaned_without_skipped
+)
+
+summary(model_gd_baseline)
+
+```
+
+
