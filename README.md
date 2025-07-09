@@ -1,18 +1,11 @@
 # An eye-tracking analysis of Kalaallisut reading
 
-This repository contains the code and data for the Kalaallisut eye-tracking reading study.
+This repository contains code and data from the Kalaallisut eye-tracking reading study.
 
 ## Repository Contents
 
-- `code/` — Scripts for data processing, analysis, and visualization.
-- `data/` — Greenlandic eye-tracking reading data (licensed separately, see below).
-- `results/` — Generated figures, tables, or processed outputs (optional).
-
-## Project Description
-
-This project analyzes eye-tracking data ... 
-
-If you use this code or data, please cite appropriately (see below).
+- `code/` — Scripts for data preprocessing and central analyses (contrasting reading measures for lexical and grammatical suffixes and words)
+- `data/` — Kalaallisut eye-tracking reading data (licensed separately, see below).
 
 ## License
 
