@@ -1,6 +1,6 @@
 # An eye-tracking analysis of Kalaallisut reading
 
-This repository contains the code and data for my analysis of Greenlandic eye-tracking reading data.
+This repository contains the code and data for the Kalaallisut eye-tracking reading study.
 
 ## Repository Contents
 
