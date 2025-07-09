@@ -16,6 +16,5 @@ If you use this code or data, please cite appropriately (see below).
 
 ## License
 
-Code: MIT License — you are free to use, modify, and distribute the code. See LICENSE.
-
-Data: The data in the data/ folder is licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) — you may share and adapt it for non-commercial purposes with proper attribution. See data/LICENSE.
+- **Code:** MIT License — you are free to use, modify, and distribute the code. See [LICENSE](./LICENSE).
+- **Data:** The data in the `data/` folder is licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) — you may share and adapt it for non-commercial purposes with proper attribution. See [`data/LICENSE`](./data/LICENSE).
