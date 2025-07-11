@@ -4,7 +4,7 @@ This repository contains code and data from the Kalaallisut eye-tracking reading
 
 ## Repository Contents
 
-- `code/` — Scripts for data preprocessing and for the central analyses (contrasting reading measures for lexical and grammatical suffixes and words). A script for the general explorative analysis will be added later.
+- `code/` — Scripts for data preprocessing and for the central analyses which contrast reading measures for lexical and grammatical suffixes and words.
 - `data/` — The Kalaallisut eye-tracking reading data (licensed separately, see below).
 - `items/` — The experimental items.
 
